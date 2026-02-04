@@ -52,6 +52,33 @@ function App() {
     }
   }, [activeTab, hasImage, imageData]);
 
+  // Check for session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = localStorage.getItem('proimageedit_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        } else {
+          localStorage.removeItem('proimageedit_token');
+        }
+      } catch (err) {
+        console.error('Session check failed:', err);
+      }
+    };
+
+    checkSession();
+  }, []);
+
   // Load image from localStorage on mount
   useEffect(() => {
     const savedData = localStorage.getItem('proimageedit_image');
@@ -449,7 +476,12 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-white overflow-hidden">
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} type={authType} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        type={authType}
+        onAuthSuccess={(userData) => setUser(userData)}
+      />
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
@@ -485,7 +517,23 @@ function App() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-3">
-          {!user && (
+          {user ? (
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-secondary">Logged in as</span>
+                <span className="text-sm font-medium text-white">{user.email}</span>
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('proimageedit_token');
+                  setUser(null);
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
             <>
               <button
                 onClick={() => openAuth('login')}
