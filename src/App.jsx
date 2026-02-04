@@ -510,22 +510,6 @@ function App() {
                 Clear
               </button>
               <button
-                className="px-4 py-2.5 rounded-lg border border-primary/50 text-primary hover:bg-primary/10 transition-all text-sm font-semibold hover:scale-105 active:scale-95"
-                onClick={() => {
-                  try {
-                    localStorage.setItem('proimageedit_image', imageData);
-                    localStorage.setItem('proimageedit_history', JSON.stringify(history));
-                    localStorage.setItem('proimageedit_index', historyIndex.toString());
-                    alert('✅ Project saved successfully!');
-                  } catch (e) {
-                    console.error('Save failed:', e);
-                    alert('⚠️ could not save full project (quota exceeded), but current image is safe!');
-                  }
-                }}
-              >
-                Save
-              </button>
-              <button
                 className="px-6 py-2.5 rounded-lg bg-primary hover:bg-blue-600 transition-all text-sm font-semibold shadow-lg shadow-primary/30 hover:scale-105 active:scale-95"
                 onClick={handleDownload}
               >
