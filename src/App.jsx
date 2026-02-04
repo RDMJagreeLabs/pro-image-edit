@@ -20,6 +20,7 @@ function App() {
   const [imageData, setImageData] = useState(null); // Store image data for tab switching
   const [history, setHistory] = useState([]); // Undo/redo history
   const [historyIndex, setHistoryIndex] = useState(-1); // Current position in history
+  const [pendingDownload, setPendingDownload] = useState(false);
   const canvasRef = useRef(null);
 
   const tabs = [
@@ -78,6 +79,15 @@ function App() {
 
     checkSession();
   }, []);
+
+  // Resume pending download after auth
+  useEffect(() => {
+    if (user && pendingDownload) {
+      console.log('🚀 Resuming pending download...');
+      handleDownload();
+      setPendingDownload(false);
+    }
+  }, [user, pendingDownload]);
 
   // Load image from localStorage on mount
   useEffect(() => {
@@ -325,12 +335,51 @@ function App() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Trigger auth if not logged in
+    if (!user) {
+      console.log('🔒 Auth required for download and save');
+      setPendingDownload(true);
+      openAuth('signup');
+      return;
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+
+    // Auto-save to Vercel Blob
+    console.log('💾 Auto-saving to Vercel Blob...');
+    try {
+      const token = localStorage.getItem('proimageedit_token');
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          filename: `edited-image-${Date.now()}.png`,
+          contentType: 'image/png',
+          dataUrl
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.json();
+        console.log('✅ Image auto-saved to:', blob.url);
+      } else {
+        console.error('❌ Auto-save failed');
+      }
+    } catch (err) {
+      console.error('❌ Auto-save error:', err);
+    }
+
+    // Trigger download
     const link = document.createElement('a');
     link.download = 'edited-image.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = dataUrl;
     link.click();
   };
 

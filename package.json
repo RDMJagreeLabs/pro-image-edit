@@ -12,6 +12,7 @@
   "dependencies": {
     "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@stripe/stripe-js": "^8.7.0",
+    "@vercel/blob": "^0.27.1",
     "@vercel/postgres": "^0.10.0",
     "bcryptjs": "^3.0.3",
     "jsonwebtoken": "^9.0.3",
