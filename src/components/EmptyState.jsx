@@ -118,18 +118,6 @@ const EmptyState = ({ onUpload }) => {
                         </button>
                     </div>
 
-                    {/* Subtle divider */}
-                    <div className="mt-8 pt-6 border-t border-white/10">
-                        <p className="text-xs text-white/40 font-light mb-3">
-                            Supported formats
-                        </p>
-                        <div className="flex items-center justify-center gap-4 text-[10px] text-white/60">
-                            <span className="px-2 py-1 rounded-full bg-white/5">JPG</span>
-                            <span className="px-2 py-1 rounded-full bg-white/5">PNG</span>
-                            <span className="px-2 py-1 rounded-full bg-white/5">GIF</span>
-                            <span className="px-2 py-1 rounded-full bg-white/5">WebP</span>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Feature highlights - minimal */}
