@@ -7,16 +7,20 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
+    if (!identifier || !password) {
+        return res.status(400).json({ error: 'Identifier (email/username) and password are required' });
     }
 
     try {
-        // Find user
-        const user = await findUserByEmail(email);
+        // Find user by email or username
+        let user = await findUserByEmail(identifier);
         if (!user) {
+            user = await findUserByUsername(identifier);
+        }
+
+        if (!user || !user.password) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 

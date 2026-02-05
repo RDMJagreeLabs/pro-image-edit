@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 const AuthModal = ({ isOpen, onClose, type = 'login', onAuthSuccess }) => {
     const [mode, setMode] = useState(type); // 'login' or 'signup'
     const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -15,12 +16,15 @@ const AuthModal = ({ isOpen, onClose, type = 'login', onAuthSuccess }) => {
         setLoading(true);
 
         const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+        const body = mode === 'login'
+            ? { identifier: email, password }
+            : { email, username, password };
 
         try {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify(body),
             });
 
             const data = await response.json();
@@ -165,16 +169,32 @@ const AuthModal = ({ isOpen, onClose, type = 'login', onAuthSuccess }) => {
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-secondary uppercase tracking-wider ml-1">Email Address</label>
+                            <label className="text-xs font-semibold text-secondary uppercase tracking-wider ml-1">
+                                {mode === 'login' ? 'Email or Username' : 'Email Address'}
+                            </label>
                             <input
-                                type="email"
+                                type={mode === 'login' ? 'text' : 'email'}
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="name@company.com"
+                                placeholder={mode === 'login' ? "Username or email" : "name@company.com"}
                                 className="w-full px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none transition-all text-white placeholder-secondary/30"
                             />
                         </div>
+
+                        {mode === 'signup' && (
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold text-secondary uppercase tracking-wider ml-1">Username</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="cool_editor_123"
+                                    className="w-full px-5 py-3.5 rounded-xl bg-white/5 border border-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 outline-none transition-all text-white placeholder-secondary/30"
+                                />
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
