@@ -5,11 +5,13 @@ const EditorCanvas = ({ activeTool, forwardedRef, cropBox, setCropBox }) => {
     const [dragMode, setDragMode] = useState(null); // 'move' or handle position like 'tl', 'tr', 'bl', 'br'
     const [startPos, setStartPos] = useState({ x: 0, y: 0 });
 
-    const HANDLE_SIZE = 10;
+    const containerRef = useRef(null);
 
     const getMousePos = (e) => {
+        const container = containerRef.current;
+        if (!container) return { x: 0, y: 0 };
+        const rect = container.getBoundingClientRect();
         const canvas = forwardedRef.current;
-        const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return {
@@ -24,16 +26,12 @@ const EditorCanvas = ({ activeTool, forwardedRef, cropBox, setCropBox }) => {
         const pos = getMousePos(e);
         const { x, y, width, height } = cropBox;
 
-        // Check if clicking on handles
-        if (Math.abs(pos.x - x) < HANDLE_SIZE && Math.abs(pos.y - y) < HANDLE_SIZE) setDragMode('tl');
-        else if (Math.abs(pos.x - (x + width)) < HANDLE_SIZE && Math.abs(pos.y - y) < HANDLE_SIZE) setDragMode('tr');
-        else if (Math.abs(pos.x - x) < HANDLE_SIZE && Math.abs(pos.y - (y + height)) < HANDLE_SIZE) setDragMode('bl');
-        else if (Math.abs(pos.x - (x + width)) < HANDLE_SIZE && Math.abs(pos.y - (y + height)) < HANDLE_SIZE) setDragMode('br');
-        else if (pos.x > x && pos.x < x + width && pos.y > y && pos.y < y + height) setDragMode('move');
-        else return;
-
-        setIsDragging(true);
-        setStartPos(pos);
+        // Only handle 'move' mode here. Handles have their own onMouseDown with stopPropagation.
+        if (pos.x > x && pos.x < x + width && pos.y > y && pos.y < y + height) {
+            setDragMode('move');
+            setIsDragging(true);
+            setStartPos(pos);
+        }
     };
 
     const handleMouseMove = (e) => {
@@ -120,13 +118,16 @@ const EditorCanvas = ({ activeTool, forwardedRef, cropBox, setCropBox }) => {
     }, [forwardedRef, cropBox.imageSet]);
 
     return (
-        <div className="relative shadow-2xl rounded-sm ring-1 ring-white/10 mx-auto flex items-center justify-center bg-[#1a1a1a] w-fit">
+        <div
+            ref={containerRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            className="relative shadow-2xl rounded-sm ring-1 ring-white/10 mx-auto flex items-center justify-center bg-[#1a1a1a] w-fit"
+        >
             <canvas
                 ref={forwardedRef}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
                 className={`block object-contain max-w-full max-h-[60vh] ${activeTool === 'crop' ? 'cursor-crosshair' : ''}`}
                 style={{
                     width: 'auto',
@@ -178,10 +179,22 @@ const EditorCanvas = ({ activeTool, forwardedRef, cropBox, setCropBox }) => {
                         </div>
 
                         {/* Handles */}
-                        <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white rounded-full border border-black/20 pointer-events-auto cursor-nw-resize" />
-                        <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white rounded-full border border-black/20 pointer-events-auto cursor-ne-resize" />
-                        <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white rounded-full border border-black/20 pointer-events-auto cursor-sw-resize" />
-                        <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white rounded-full border border-black/20 pointer-events-auto cursor-se-resize" />
+                        <div
+                            onMouseDown={(e) => { e.stopPropagation(); setDragMode('tl'); setIsDragging(true); setStartPos(getMousePos(e)); }}
+                            className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-white rounded-full border-2 border-primary pointer-events-auto cursor-nw-resize shadow-lg z-10"
+                        />
+                        <div
+                            onMouseDown={(e) => { e.stopPropagation(); setDragMode('tr'); setIsDragging(true); setStartPos(getMousePos(e)); }}
+                            className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white rounded-full border-2 border-primary pointer-events-auto cursor-ne-resize shadow-lg z-10"
+                        />
+                        <div
+                            onMouseDown={(e) => { e.stopPropagation(); setDragMode('bl'); setIsDragging(true); setStartPos(getMousePos(e)); }}
+                            className="absolute -bottom-1.5 -left-1.5 w-4 h-4 bg-white rounded-full border-2 border-primary pointer-events-auto cursor-sw-resize shadow-lg z-10"
+                        />
+                        <div
+                            onMouseDown={(e) => { e.stopPropagation(); setDragMode('br'); setIsDragging(true); setStartPos(getMousePos(e)); }}
+                            className="absolute -bottom-1.5 -right-1.5 w-4 h-4 bg-white rounded-full border-2 border-primary pointer-events-auto cursor-se-resize shadow-lg z-10"
+                        />
                     </div>
                 </div>
             )}
