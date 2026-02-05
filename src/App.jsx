@@ -845,12 +845,6 @@ function App() {
 
     // Compression panel - floating buttons on left side
     if (activeTool === 'compress') {
-      const formats = [
-        { id: 'image/jpeg', label: 'JPEG' },
-        { id: 'image/webp', label: 'WebP' },
-        { id: 'image/png', label: 'PNG' }
-      ];
-
       return (
         <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col gap-4 w-56 shadow-2xl">
@@ -869,26 +863,7 @@ function App() {
                   value={compressParams.quality}
                   onChange={(e) => setCompressParams(prev => ({ ...prev, quality: parseInt(e.target.value) }))}
                   className="w-full accent-primary bg-white/10 rounded-lg h-1 appearance-none cursor-pointer"
-                  disabled={compressParams.format === 'image/png'}
                 />
-                {compressParams.format === 'image/png' && (
-                  <span className="text-[9px] text-secondary/40 italic block mt-1 leading-tight">Quality adjustment only available for JPEG and WebP</span>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <span className="text-[10px] text-secondary block font-medium">Format</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {formats.map(f => (
-                    <button
-                      key={f.id}
-                      onClick={() => setCompressParams(prev => ({ ...prev, format: f.id }))}
-                      className={`px-2 py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] font-medium transition-all border ${compressParams.format === f.id ? 'border-primary text-primary bg-primary/5' : 'border-white/5'}`}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {bulkFiles.length > 1 && (
