@@ -7,6 +7,7 @@ const tools = [
     { id: 'flip', label: 'Flip', icon: '⇄', description: 'Flip H/V' },
     { id: 'crop', label: 'Crop', icon: '✂️', description: 'Cut and resize' },
     { id: 'resize', label: 'Resize', icon: '📏', description: 'Change dimensions' },
+    { id: 'compress', label: 'Compress', icon: '🗜️', description: 'Reduce file size' },
 ];
 
 const HorizontalToolbar = ({ activeTool, setActiveTool }) => {

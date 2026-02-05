@@ -16,9 +16,9 @@ const EmptyState = ({ onUpload }) => {
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            onUpload(file);
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        if (files.length > 0) {
+            onUpload(files.length === 1 ? files[0] : files);
         }
     };
 
@@ -83,10 +83,12 @@ const EmptyState = ({ onUpload }) => {
                     <label className="inline-block cursor-pointer group">
                         <input
                             type="file"
-                            accept="image/*"
+                            multiple
                             onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) onUpload(file);
+                                const files = Array.from(e.target.files);
+                                if (files.length > 0) {
+                                    onUpload(files.length === 1 ? files[0] : files);
+                                }
                             }}
                             className="hidden"
                         />

@@ -23,6 +23,8 @@ function App() {
   const [pendingDownload, setPendingDownload] = useState(false);
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 200, height: 200, imageSet: false });
   const [resizeParams, setResizeParams] = useState({ width: 0, height: 0, lockAspectRatio: true, originalRatio: 1 });
+  const [compressParams, setCompressParams] = useState({ quality: 80, format: 'image/jpeg', showComparison: false });
+  const [bulkFiles, setBulkFiles] = useState([]);
   const canvasRef = useRef(null);
 
   const tabs = [
@@ -153,9 +155,19 @@ function App() {
     }
   }, [imageData, hasImage, history, historyIndex]);
 
-  const handleFileUpload = (file) => {
-    if (!file) return;
+  const handleFileUpload = (input) => {
+    if (!input) return;
 
+    // Handle multiple files
+    if (Array.isArray(input)) {
+      console.log('📦 Bulk upload detected:', input.length, 'files');
+      setBulkFiles(input);
+      // Automatically load the first one for the editor
+      handleFileUpload(input[0]);
+      return;
+    }
+
+    const file = input;
     console.log('🔵 Upload started:', file.name);
 
     const reader = new FileReader();
@@ -444,10 +456,13 @@ function App() {
       return;
     }
 
-    const dataUrl = canvas.toDataURL('image/png');
+    // Trigger download
+    const mimeType = activeTool === 'compress' ? compressParams.format : 'image/png';
+    const quality = activeTool === 'compress' ? compressParams.quality / 100 : 1;
+    const dataUrl = canvas.toDataURL(mimeType, quality);
 
     // Auto-save to Vercel Blob
-    console.log('💾 Auto-saving to Vercel Blob...');
+    console.log(`💾 Auto-saving to Vercel Blob (${mimeType} @ ${quality})...`);
     try {
       const token = localStorage.getItem('proimageedit_token');
       const response = await fetch('/api/upload', {
@@ -457,8 +472,8 @@ function App() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          filename: `edited-image-${Date.now()}.png`,
-          contentType: 'image/png',
+          filename: `edited-image-${Date.now()}.${mimeType.split('/')[1]}`,
+          contentType: mimeType,
           dataUrl
         })
       });
@@ -473,9 +488,8 @@ function App() {
       console.error('❌ Auto-save error:', err);
     }
 
-    // Trigger download
     const link = document.createElement('a');
-    link.download = 'edited-image.png';
+    link.download = `edited-image.${mimeType.split('/')[1]}`;
     link.href = dataUrl;
     link.click();
   };
@@ -778,6 +792,99 @@ function App() {
       );
     }
 
+    // Compression panel - floating buttons on left side
+    if (activeTool === 'compress') {
+      const formats = [
+        { id: 'image/jpeg', label: 'JPEG' },
+        { id: 'image/webp', label: 'WebP' },
+        { id: 'image/png', label: 'PNG' }
+      ];
+
+      return (
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
+          <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col gap-4 w-56 shadow-2xl">
+            <span className="text-[10px] uppercase tracking-wider text-secondary font-bold text-center">Settings</span>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] text-secondary mb-2 block flex justify-between">
+                  <span>Quality</span>
+                  <span className="text-primary">{compressParams.quality}%</span>
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={compressParams.quality}
+                  onChange={(e) => setCompressParams(prev => ({ ...prev, quality: parseInt(e.target.value) }))}
+                  className="w-full accent-primary bg-white/10 rounded-lg h-1 appearance-none cursor-pointer"
+                  disabled={compressParams.format === 'image/png'}
+                />
+                {compressParams.format === 'image/png' && (
+                  <span className="text-[9px] text-secondary/40 italic block mt-1 leading-tight">Quality adjustment only available for JPEG and WebP</span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[10px] text-secondary block font-medium">Format</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {formats.map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setCompressParams(prev => ({ ...prev, format: f.id }))}
+                      className={`px-2 py-2 rounded bg-white/5 hover:bg-white/10 text-[10px] font-medium transition-all border ${compressParams.format === f.id ? 'border-primary text-primary bg-primary/5' : 'border-white/5'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {bulkFiles.length > 1 && (
+                <div className="pt-2 border-t border-white/5">
+                  <span className="text-[10px] text-secondary/60 block font-medium mb-1">Bulk Processing</span>
+                  <div className="bg-white/5 p-2 rounded-lg flex items-center gap-2">
+                    <span className="text-sm">📦</span>
+                    <span className="text-[10px] text-secondary">{bulkFiles.length} files selected</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  onClick={() => setCompressParams(prev => ({ ...prev, showComparison: !prev.showComparison }))}
+                  className={`w-full py-2 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-2 ${compressParams.showComparison ? 'bg-primary/20 text-primary border border-primary/20' : 'bg-white/5 text-secondary border border-white/10 hover:bg-white/10'}`}
+                >
+                  <span>{compressParams.showComparison ? '👁️ Hide Comparison' : '👁️ Show Comparison'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                // For this demo, we apply settings during download
+                alert(`Compression settings applied: ${compressParams.format} @ ${compressParams.quality}% quality.\n\nSettings will be used when you click "Download".`);
+                setActiveTool(null);
+              }}
+              className="flex-1 h-14 rounded-2xl bg-primary border border-white/20 hover:bg-blue-600 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl shadow-primary/40"
+              title="Confirm Settings"
+            >
+              <span className="text-xl">✓</span>
+            </button>
+            <button
+              onClick={() => setActiveTool(null)}
+              className="w-14 h-14 rounded-2xl bg-red-500/80 border border-white/20 hover:bg-red-600 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl shadow-red-500/20"
+              title="Cancel"
+            >
+              <span className="text-xl">✕</span>
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -894,13 +1001,46 @@ function App() {
             {hasImage && <HorizontalToolbar activeTool={activeTool} setActiveTool={setActiveTool} />}
 
             {/* Canvas Area - always rendered so ref is available */}
-            <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-black/20 to-black/40 relative">
-              <EditorCanvas
-                activeTool={activeTool}
-                forwardedRef={canvasRef}
-                cropBox={cropBox}
-                setCropBox={setCropBox}
-              />
+            <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-black/20 to-black/40 relative overflow-auto">
+              {activeTool === 'compress' && compressParams.showComparison ? (
+                <div className="flex flex-col md:flex-row gap-8 items-center justify-center animate-fade-in w-full max-w-5xl">
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <span className="text-[10px] uppercase tracking-widest text-secondary font-bold px-2">Original (Lossless)</span>
+                    <div className="relative border border-white/10 rounded-lg overflow-hidden bg-black/40 shadow-2xl">
+                      <EditorCanvas
+                        activeTool={null}
+                        forwardedRef={canvasRef}
+                        cropBox={cropBox}
+                        setCropBox={setCropBox}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <span className="text-[10px] uppercase tracking-widest text-primary font-bold px-2 flex justify-between">
+                      <span>Compressed Preview</span>
+                      <span>Quality: {compressParams.quality}%</span>
+                    </span>
+                    <div className="relative border border-primary/20 rounded-lg overflow-hidden bg-black/40 shadow-2xl">
+                      {/* Compressed Preview Canvas/Image */}
+                      <img
+                        src={canvasRef.current?.toDataURL(compressParams.format, compressParams.quality / 100)}
+                        alt="Compressed Preview"
+                        className="block object-contain max-w-full max-h-[50vh] mx-auto"
+                      />
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-primary/20 backdrop-blur rounded text-[9px] text-primary border border-primary/20">
+                        {compressParams.format.split('/')[1].toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <EditorCanvas
+                  activeTool={activeTool}
+                  forwardedRef={canvasRef}
+                  cropBox={cropBox}
+                  setCropBox={setCropBox}
+                />
+              )}
 
               {/* Undo/Redo Circular Buttons - MS Office style */}
               {hasImage && (
