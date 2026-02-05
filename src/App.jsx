@@ -30,9 +30,6 @@ function App() {
 
   const tabs = [
     { id: 'editor', label: 'Photo Editor' },
-    { id: 'compress', label: 'Compress' },
-    { id: 'resize', label: 'Resize' },
-    { id: 'convert', label: 'Convert' },
     { id: 'pricing', label: 'Pricing' },
   ];
 
