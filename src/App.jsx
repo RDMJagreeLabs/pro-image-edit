@@ -156,18 +156,21 @@ function App() {
     }
   }, [imageData, hasImage, history, historyIndex]);
 
-  // Handle generation of compression preview
+  // Handle generation of compression preview with a small debounce to keep UI snappy
   useEffect(() => {
     if (activeTool === 'compress' && compressParams.showComparison) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        try {
-          const url = canvas.toDataURL(compressParams.format, compressParams.quality / 100);
-          setPreviewUrl(url);
-        } catch (err) {
-          console.error('❌ Error generating preview:', err);
+      const timer = setTimeout(() => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+          try {
+            const url = canvas.toDataURL(compressParams.format, compressParams.quality / 100);
+            setPreviewUrl(url);
+          } catch (err) {
+            console.error('❌ Error generating preview:', err);
+          }
         }
-      }
+      }, 50); // 50ms debounce
+      return () => clearTimeout(timer);
     } else {
       setPreviewUrl(null);
     }
@@ -405,6 +408,36 @@ function App() {
       }
       return updated;
     });
+  };
+
+  const executeCompress = () => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const mimeType = compressParams.format;
+      const quality = compressParams.quality / 100;
+
+      console.log(`🗜️ Applying compression: ${mimeType} @ ${quality * 100}%`);
+
+      // Draw the compressed result back onto the canvas
+      const dataUrl = canvas.toDataURL(mimeType, quality);
+      const img = new Image();
+      img.onload = () => {
+        const ctx = canvas.getContext('2d');
+        // If we are changing formats (e.g. to JPEG), we might want to fill background with white 
+        // if the original had transparency, but let's keep it simple for now.
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        saveToHistory(canvas);
+        setActiveTool(null);
+        console.log('✅ Compression applied to canvas and saved to history');
+      };
+      img.src = dataUrl;
+    } catch (error) {
+      console.error('❌ Error applying compression:', error);
+      alert('Failed to apply compression.');
+    }
   };
 
   const applyTransform = (type) => {
@@ -881,13 +914,9 @@ function App() {
 
           <div className="flex gap-2">
             <button
-              onClick={() => {
-                // For this demo, we apply settings during download
-                alert(`Compression settings applied: ${compressParams.format} @ ${compressParams.quality}% quality.\n\nSettings will be used when you click "Download".`);
-                setActiveTool(null);
-              }}
+              onClick={executeCompress}
               className="flex-1 h-14 rounded-2xl bg-primary border border-white/20 hover:bg-blue-600 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl shadow-primary/40"
-              title="Confirm Settings"
+              title="Apply Compression"
             >
               <span className="text-xl">✓</span>
             </button>
