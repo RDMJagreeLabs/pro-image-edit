@@ -24,6 +24,7 @@ function App() {
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 200, height: 200, imageSet: false });
   const [resizeParams, setResizeParams] = useState({ width: 0, height: 0, lockAspectRatio: true, originalRatio: 1 });
   const [compressParams, setCompressParams] = useState({ quality: 80, format: 'image/jpeg', showComparison: false });
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [bulkFiles, setBulkFiles] = useState([]);
   const canvasRef = useRef(null);
 
@@ -154,6 +155,23 @@ function App() {
       }
     }
   }, [imageData, hasImage, history, historyIndex]);
+
+  // Handle generation of compression preview
+  useEffect(() => {
+    if (activeTool === 'compress' && compressParams.showComparison) {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        try {
+          const url = canvas.toDataURL(compressParams.format, compressParams.quality / 100);
+          setPreviewUrl(url);
+        } catch (err) {
+          console.error('❌ Error generating preview:', err);
+        }
+      }
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [activeTool, compressParams.quality, compressParams.format, compressParams.showComparison]);
 
   const handleFileUpload = (input) => {
     if (!input) return;
@@ -1002,45 +1020,54 @@ function App() {
 
             {/* Canvas Area - always rendered so ref is available */}
             <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-black/20 to-black/40 relative overflow-auto">
-              {activeTool === 'compress' && compressParams.showComparison ? (
-                <div className="flex flex-col md:flex-row gap-8 items-center justify-center animate-fade-in w-full max-w-5xl">
-                  <div className="flex flex-col gap-2 flex-1 min-w-0">
-                    <span className="text-[10px] uppercase tracking-widest text-secondary font-bold px-2">Original (Lossless)</span>
-                    <div className="relative border border-white/10 rounded-lg overflow-hidden bg-black/40 shadow-2xl">
-                      <EditorCanvas
-                        activeTool={null}
-                        forwardedRef={canvasRef}
-                        cropBox={cropBox}
-                        setCropBox={setCropBox}
-                      />
-                    </div>
+              <div className={`flex items-center justify-center gap-8 w-full max-w-5xl ${activeTool === 'compress' && compressParams.showComparison ? 'flex-col lg:flex-row' : 'flex-col'}`}>
+
+                {/* Main Editor / Original Side */}
+                <div className={`flex flex-col gap-2 min-w-0 transition-all duration-300 ${activeTool === 'compress' && compressParams.showComparison ? 'flex-1 invisible md:visible h-0 md:h-auto' : 'w-full'}`}>
+                  {activeTool === 'compress' && compressParams.showComparison && (
+                    <span className="text-[10px] uppercase tracking-widest text-secondary font-bold px-2 animate-fade-in">Original (Lossless)</span>
+                  )}
+                  <div className={`relative border border-white/10 rounded-lg overflow-hidden bg-black/40 shadow-2xl w-fit mx-auto`}>
+                    <EditorCanvas
+                      activeTool={activeTool === 'compress' && compressParams.showComparison ? null : activeTool}
+                      forwardedRef={canvasRef}
+                      cropBox={cropBox}
+                      setCropBox={setCropBox}
+                    />
                   </div>
-                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                </div>
+
+                {/* Compressed Preview Side */}
+                {activeTool === 'compress' && compressParams.showComparison && (
+                  <div className="flex flex-col gap-2 flex-1 min-w-0 animate-fade-in">
                     <span className="text-[10px] uppercase tracking-widest text-primary font-bold px-2 flex justify-between">
                       <span>Compressed Preview</span>
-                      <span>Quality: {compressParams.quality}%</span>
+                      <span className="flex gap-2">
+                        <span>Quality: {compressParams.quality}%</span>
+                        <span className="text-secondary/40">|</span>
+                        <span>{compressParams.format.split('/')[1].toUpperCase()}</span>
+                      </span>
                     </span>
-                    <div className="relative border border-primary/20 rounded-lg overflow-hidden bg-black/40 shadow-2xl">
-                      {/* Compressed Preview Canvas/Image */}
-                      <img
-                        src={canvasRef.current?.toDataURL(compressParams.format, compressParams.quality / 100)}
-                        alt="Compressed Preview"
-                        className="block object-contain max-w-full max-h-[50vh] mx-auto"
-                      />
-                      <div className="absolute top-2 right-2 px-2 py-1 bg-primary/20 backdrop-blur rounded text-[9px] text-primary border border-primary/20">
-                        {compressParams.format.split('/')[1].toUpperCase()}
+                    <div className="relative border border-primary/20 rounded-lg overflow-hidden bg-black/40 shadow-2xl min-h-[100px] flex items-center justify-center">
+                      {previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt="Compressed Preview"
+                          className="block object-contain max-w-full max-h-[50vh] mx-auto"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2 py-12">
+                          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                          <span className="text-xs text-secondary/60">Generating preview...</span>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 px-2 py-1 bg-primary/20 backdrop-blur rounded text-[9px] text-primary border border-primary/20 font-bold">
+                        PREVIEW
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <EditorCanvas
-                  activeTool={activeTool}
-                  forwardedRef={canvasRef}
-                  cropBox={cropBox}
-                  setCropBox={setCropBox}
-                />
-              )}
+                )}
+              </div>
 
               {/* Undo/Redo Circular Buttons - MS Office style */}
               {hasImage && (
