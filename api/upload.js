@@ -1,5 +1,5 @@
 import { put } from '@vercel/blob';
-import { sql } from '@vercel/postgres';
+import { saveImageMetadata, initDB } from '../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -35,21 +35,17 @@ export default async function handler(req, res) {
             access: 'public',
         });
 
-        // Save to database
-        await sql`
-      CREATE TABLE IF NOT EXISTS images (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        url TEXT NOT NULL,
-        filename TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
+        // Ensure DB is initialized
+        await initDB();
 
-        await sql`
-      INSERT INTO images (user_id, url, filename)
-      VALUES (${userId}, ${blob.url}, ${filename})
-    `;
+        // Save image metadata
+        await saveImageMetadata({
+            userId,
+            filename: filename || 'unnamed',
+            url: blob.url,
+            contentType: contentType || 'image/png',
+            size: buffer.length
+        });
 
         return res.status(200).json(blob);
     } catch (error) {

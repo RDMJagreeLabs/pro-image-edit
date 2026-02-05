@@ -5,7 +5,7 @@ const tools = [
     { id: 'adjust', label: 'Adjust', icon: '⚙️', description: 'Brightness, Contrast' },
     { id: 'rotate', label: 'Rotate', icon: '↻', description: 'Rotate 90°' },
     { id: 'flip', label: 'Flip', icon: '⇄', description: 'Flip H/V' },
-    { id: 'crop', label: 'Crop', icon: '✂️', description: 'Coming soon' },
+    { id: 'crop', label: 'Crop', icon: '✂️', description: 'Cut and resize' },
     { id: 'resize', label: 'Resize', icon: '📏', description: 'Coming soon' },
 ];
 

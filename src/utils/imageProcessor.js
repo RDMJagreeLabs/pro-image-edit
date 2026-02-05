@@ -58,5 +58,12 @@ export const imageProcessor = {
             data[i + 2] = factor * (data[i + 2] - 128) + 128;
         }
         ctx.putImageData(imageData, 0, 0);
+    },
+
+    crop: (ctx, x, y, width, height) => {
+        const imageData = ctx.getImageData(x, y, width, height);
+        // We'll need to resize the canvas outside this function, 
+        // but this gets the data we need.
+        return imageData;
     }
 };

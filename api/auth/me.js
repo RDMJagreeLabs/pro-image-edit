@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { findUserById } from '../../lib/db.js';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -17,18 +17,17 @@ export default async function handler(req, res) {
         const secret = process.env.JWT_SECRET || 'fallback_secret_change_me_in_vercel';
         const decoded = jwt.verify(token, secret);
 
-        const result = await sql`SELECT email, created_at FROM users WHERE id = ${decoded.userId}`;
-        if (result.rows.length === 0) {
+        const user = await findUserById(decoded.userId);
+        if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const user = result.rows[0];
-
         return res.status(200).json({
             user: {
-                id: decoded.userId,
+                id: user.id,
                 email: user.email,
-                createdAt: user.created_at
+                createdAt: user.created_at,
+                provider: user.provider
             }
         });
     } catch (error) {

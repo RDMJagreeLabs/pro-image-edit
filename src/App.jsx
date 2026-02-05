@@ -21,6 +21,7 @@ function App() {
   const [history, setHistory] = useState([]); // Undo/redo history
   const [historyIndex, setHistoryIndex] = useState(-1); // Current position in history
   const [pendingDownload, setPendingDownload] = useState(false);
+  const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 200, height: 200, imageSet: false });
   const canvasRef = useRef(null);
 
   const tabs = [
@@ -187,6 +188,15 @@ function App() {
         setHistory([initialState]);
         setHistoryIndex(0);
 
+        // Initialize crop box to 80% of image size
+        setCropBox({
+          x: width * 0.1,
+          y: height * 0.1,
+          width: width * 0.8,
+          height: height * 0.8,
+          imageSet: true
+        });
+
         console.log('✅ Image uploaded successfully! hasImage:', true);
       };
       img.onerror = (err) => {
@@ -287,6 +297,30 @@ function App() {
     }
   };
 
+  const executeCrop = () => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const { x, y, width, height } = cropBox;
+      const ctx = canvas.getContext('2d');
+      const croppedData = imageProcessor.crop(ctx, x, y, width, height);
+
+      // Resize canvas to new dimensions
+      canvas.width = width;
+      canvas.height = height;
+      const newCtx = canvas.getContext('2d');
+      newCtx.putImageData(croppedData, 0, 0);
+
+      saveToHistory(canvas);
+      setActiveTool(null);
+      console.log('✅ Crop executed and saved');
+    } catch (error) {
+      console.error('❌ Error executing crop:', error);
+      alert('Failed to crop image.');
+    }
+  };
+
   const applyTransform = (type) => {
     try {
       console.log('🔄 Applying transform:', type);
@@ -336,14 +370,21 @@ function App() {
   };
 
   const handleDownload = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    console.log('📥 Download requested, user:', user ? user.email : 'guest');
 
-    // Trigger auth if not logged in
+    // Trigger auth if not logged in - check this BEFORE canvas
     if (!user) {
       console.log('🔒 Auth required for download and save');
       setPendingDownload(true);
       openAuth('signup');
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      console.warn('⚠️ Canvas not found - switching to editor tab');
+      setActiveTab('editor');
+      setPendingDownload(true);
       return;
     }
 
@@ -435,6 +476,61 @@ function App() {
           >
             <div className="w-8 h-8 rounded-full bg-white border-2 border-black"></div>
             <span className="absolute left-20 whitespace-nowrap bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Invert</span>
+          </button>
+        </div>
+      );
+    }
+
+    // Crop panel - floating buttons on left side
+    if (activeTool === 'crop') {
+      const setAspectRatio = (ratio) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const newBox = { ...cropBox };
+        if (ratio === '1:1') {
+          const size = Math.min(newBox.width, newBox.height);
+          newBox.width = size;
+          newBox.height = size;
+        } else if (ratio === '4:3') {
+          newBox.height = newBox.width * (3 / 4);
+        } else if (ratio === '16:9') {
+          newBox.height = newBox.width * (9 / 16);
+        }
+
+        // Ensure within bounds after ratio adjustment
+        if (newBox.y + newBox.height > canvas.height) {
+          newBox.height = canvas.height - newBox.y;
+          if (ratio === '4:3') newBox.width = newBox.height * (4 / 3);
+          else if (ratio === '16:9') newBox.width = newBox.height * (16 / 9);
+        }
+
+        setCropBox(newBox);
+      };
+
+      return (
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
+          <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl p-3 flex flex-col gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-secondary font-bold text-center mb-1">Ratio</span>
+            <button onClick={() => setAspectRatio('1:1')} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium">1:1</button>
+            <button onClick={() => setAspectRatio('4:3')} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium">4:3</button>
+            <button onClick={() => setAspectRatio('16:9')} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium">16:9</button>
+            <button onClick={() => setCropBox({ ...cropBox, width: canvasRef.current.width * 0.8, height: canvasRef.current.height * 0.8 })} className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-medium">Free</button>
+          </div>
+
+          <button
+            onClick={executeCrop}
+            className="w-16 h-16 rounded-full bg-primary border border-white/20 hover:bg-blue-600 transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-xl shadow-primary/40"
+            title="Apply Crop"
+          >
+            <span className="text-2xl">✓</span>
+          </button>
+          <button
+            onClick={() => setActiveTool(null)}
+            className="w-16 h-16 rounded-full bg-red-500/80 border border-white/20 hover:bg-red-600 transition-all hover:scale-110 active:scale-95 flex items-center justify-center shadow-xl shadow-red-500/20"
+            title="Cancel"
+          >
+            <span className="text-2xl">✕</span>
           </button>
         </div>
       );
@@ -637,7 +733,12 @@ function App() {
 
             {/* Canvas Area - always rendered so ref is available */}
             <div className="flex-1 flex items-center justify-center p-8 bg-gradient-to-br from-black/20 to-black/40 relative">
-              <EditorCanvas activeTool={activeTool} forwardedRef={canvasRef} />
+              <EditorCanvas
+                activeTool={activeTool}
+                forwardedRef={canvasRef}
+                cropBox={cropBox}
+                setCropBox={setCropBox}
+              />
 
               {/* Undo/Redo Circular Buttons - MS Office style */}
               {hasImage && (

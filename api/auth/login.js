@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { findUserByEmail } from '../../lib/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -14,21 +14,19 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 1. Find user
-        const result = await sql`SELECT * FROM users WHERE email = ${email}`;
-        if (result.rows.length === 0) {
+        // Find user
+        const user = await findUserByEmail(email);
+        if (!user) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const user = result.rows[0];
-
-        // 2. Compare password
+        // Compare password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        // 3. Generate JWT
+        // Generate JWT
         const secret = process.env.JWT_SECRET || 'fallback_secret_change_me_in_vercel';
         const token = jwt.sign(
             { userId: user.id, email: user.email },
@@ -46,6 +44,9 @@ export default async function handler(req, res) {
         });
     } catch (error) {
         console.error('Login error:', error);
-        return res.status(500).json({ error: 'Internal server error' });
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
     }
 }

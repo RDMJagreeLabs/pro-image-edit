@@ -2,7 +2,11 @@
 
 ProImageEdit is a professional, high-performance web-based image editing platform built with React, Vite, and Tailwind CSS. It offers a seamless experience for users to upload, edit, and manage their images with integrated authentication and payment systems.
 
-## Features
+## Demo
+
+You can try the live demo here: [pro-image-edit.vercel.app](https://pro-image-edit.vercel.app/)
+
+## 🚀 Features
 
 - **Advanced Image Editing**: Crop, resize, filter, and enhance images directly in the browser.
 - **Secure Authentication**: Built-in user signup, login, and social authentication using JWT and bcrypt.
@@ -12,7 +16,7 @@ ProImageEdit is a professional, high-performance web-based image editing platfor
 - **API Documentation**: Interactive Swagger/OpenAPI documentation for backend services.
 - **Modern UI/UX**: Responsive design with a dark mode aesthetic and smooth micro-interactions.
 
-## Tech Stack
+## 🛠 Tech Stack
 
 - **Frontend**: React 19, Vite, Tailwind CSS, Lucide React (icons)
 - **Backend**: Node.js (Vercel Serverless Functions)
@@ -21,7 +25,7 @@ ProImageEdit is a professional, high-performance web-based image editing platfor
 - **Payments**: Stripe, Lemon Squeezy
 - **Security**: JWT, bcryptjs
 
-## Getting Started
+## 🏁 Getting Started
 
 ### Prerequisites
 
@@ -43,20 +47,20 @@ ProImageEdit is a professional, high-performance web-based image editing platfor
    ```
 
 3. Set up environment variables:
-   Create a .env file in the root directory and add the required keys (see .env.example).
+   Create a `.env` file in the root directory and add the required keys (see `.env.example`).
 
 4. Start the development server:
    ```bash
    npm run dev
    ```
 
-## Deployment
+## 🌐 Deployment
 
-The project is optimized for deployment on **Vercel**. Connect your repository to Vercel, and it will automatically detect the configuration from vercel.json and vite.config.js.
+The project is optimized for deployment on **Vercel**. Connect your repository to Vercel, and it will automatically detect the configuration from `vercel.json` and `vite.config.js`.
 
-## API Reference
+## 📖 API Reference
 
-You can view the API documentation locally or on the deployed site at /swagger.json or through the interactive UI if configured.
+You can view the API documentation locally or on the deployed site at `/swagger.json` or through the interactive UI if configured.
 
 ---
 
