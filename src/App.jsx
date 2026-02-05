@@ -22,6 +22,7 @@ function App() {
   const [historyIndex, setHistoryIndex] = useState(-1); // Current position in history
   const [pendingDownload, setPendingDownload] = useState(false);
   const [cropBox, setCropBox] = useState({ x: 0, y: 0, width: 200, height: 200, imageSet: false });
+  const [resizeParams, setResizeParams] = useState({ width: 0, height: 0, lockAspectRatio: true, originalRatio: 1 });
   const canvasRef = useRef(null);
 
   const tabs = [
@@ -197,6 +198,14 @@ function App() {
           imageSet: true
         });
 
+        // Initialize resize params
+        setResizeParams({
+          width: width,
+          height: height,
+          lockAspectRatio: true,
+          originalRatio: width / height
+        });
+
         console.log('✅ Image uploaded successfully! hasImage:', true);
       };
       img.onerror = (err) => {
@@ -319,6 +328,53 @@ function App() {
       console.error('❌ Error executing crop:', error);
       alert('Failed to crop image.');
     }
+  };
+
+  const executeResize = () => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const { width, height } = resizeParams;
+      const ctx = canvas.getContext('2d');
+
+      // Create a temporary canvas to hold the original image
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(canvas, 0, 0);
+
+      // Resize original canvas
+      canvas.width = width;
+      canvas.height = height;
+      const newCtx = canvas.getContext('2d');
+
+      // Draw from temp canvas to scaled canvas
+      newCtx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, width, height);
+
+      saveToHistory(canvas);
+      setActiveTool(null);
+      console.log('✅ Resize executed and saved');
+    } catch (error) {
+      console.error('❌ Error executing resize:', error);
+      alert('Failed to resize image.');
+    }
+  };
+
+  const handleResizeParamChange = (field, value) => {
+    const newVal = parseInt(value) || 0;
+    setResizeParams(prev => {
+      const updated = { ...prev, [field]: newVal };
+      if (prev.lockAspectRatio) {
+        if (field === 'width') {
+          updated.height = Math.round(newVal / prev.originalRatio);
+        } else if (field === 'height') {
+          updated.width = Math.round(newVal * prev.originalRatio);
+        }
+      }
+      return updated;
+    });
   };
 
   const applyTransform = (type) => {
@@ -532,6 +588,112 @@ function App() {
           >
             <span className="text-2xl">✕</span>
           </button>
+        </div>
+      );
+    }
+
+    // Resize panel - floating buttons on left side
+    if (activeTool === 'resize') {
+      const scaleBy = (percent) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const factor = percent / 100;
+        setResizeParams(prev => ({
+          ...prev,
+          width: Math.round(canvas.width * factor),
+          height: Math.round(canvas.height * factor)
+        }));
+      };
+
+      const setPreset = (w, h) => {
+        setResizeParams(prev => ({
+          ...prev,
+          width: w,
+          height: h
+        }));
+      };
+
+      return (
+        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-50">
+          <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col gap-4 w-56 shadow-2xl">
+            <span className="text-[10px] uppercase tracking-wider text-secondary font-bold text-center">Dimensions</span>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-secondary mb-1 block">Width</label>
+                  <input
+                    type="number"
+                    value={resizeParams.width}
+                    onChange={(e) => handleResizeParamChange('width', e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+                <div className="pt-4">
+                  <button
+                    onClick={() => setResizeParams(prev => ({ ...prev, lockAspectRatio: !prev.lockAspectRatio }))}
+                    className={`p-1.5 rounded-lg transition-colors ${resizeParams.lockAspectRatio ? 'text-primary bg-primary/10' : 'text-secondary hover:bg-white/5'}`}
+                    title="Lock Aspect Ratio"
+                  >
+                    {resizeParams.lockAspectRatio ? '🔒' : '🔓'}
+                  </button>
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-secondary mb-1 block">Height</label>
+                  <input
+                    type="number"
+                    value={resizeParams.height}
+                    onChange={(e) => handleResizeParamChange('height', e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-1.5">
+              {[25, 50, 75, 100, 200].map(p => (
+                <button
+                  key={p}
+                  onClick={() => scaleBy(p)}
+                  className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[10px] font-medium transition-colors"
+                >
+                  {p}%
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-secondary/50 block font-medium">Presets</span>
+              <div className="grid grid-cols-1 gap-1.5">
+                <button onClick={() => setPreset(1920, 1080)} className="text-left px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] flex justify-between">
+                  <span>Full HD</span> <span className="text-secondary">1920×1080</span>
+                </button>
+                <button onClick={() => setPreset(1080, 1080)} className="text-left px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] flex justify-between">
+                  <span>Instagram</span> <span className="text-secondary">1080×1080</span>
+                </button>
+                <button onClick={() => setPreset(3508, 2480)} className="text-left px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] flex justify-between">
+                  <span>A4 @ 300dpi</span> <span className="text-secondary">3508×2480</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={executeResize}
+              className="flex-1 h-14 rounded-2xl bg-primary border border-white/20 hover:bg-blue-600 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl shadow-primary/40"
+              title="Apply Resize"
+            >
+              <span className="text-xl">✓</span>
+            </button>
+            <button
+              onClick={() => setActiveTool(null)}
+              className="w-14 h-14 rounded-2xl bg-red-500/80 border border-white/20 hover:bg-red-600 transition-all hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl shadow-red-500/20"
+              title="Cancel"
+            >
+              <span className="text-xl">✕</span>
+            </button>
+          </div>
         </div>
       );
     }
